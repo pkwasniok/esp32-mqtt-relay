@@ -1,5 +1,6 @@
 #include "setup.h"
 #include "config.h"
+#include "wifi.h"
 #include "nvs_flash.h"
 #include "esp_event.h"
 #include "esp_netif.h"
@@ -13,8 +14,9 @@
 
 #define STATE_SETUP_NVS   0
 #define STATE_SETUP_NETIF 1
-#define STATE_SUCCESS     2
-#define STATE_ERROR       3
+#define STATE_SETUP_WIFI  2
+#define STATE_SUCCESS     3
+#define STATE_ERROR       4
 
 /*
  * Non-volatile storage (NVS) library is designed to store key-value pairs in flash.
@@ -77,9 +79,19 @@ int app_setup(void) {
             case STATE_SETUP_NETIF:
                 if (netif_setup() == SUCCESS) {
                     ESP_LOGI(TAG, "Finished NETIF setup");
-                    state = STATE_SUCCESS;
+                    state = STATE_SETUP_WIFI;
                 } else {
                     ESP_LOGE(TAG, "Error occured during NETIF setup");
+                    state = STATE_ERROR;
+                }
+                break;
+
+            case STATE_SETUP_WIFI:
+                if (wifi_setup() == SUCCESS) {
+                    ESP_LOGI(TAG, "Finished WIFI setup");
+                    state = STATE_SUCCESS;
+                } else {
+                    ESP_LOGE(TAG, "Error occured during WIFI setup");
                     state = STATE_ERROR;
                 }
                 break;
@@ -94,7 +106,5 @@ int app_setup(void) {
 
         }
     }
-
-    return SETUP_SUCCESS;
 }
 

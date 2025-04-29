@@ -1,18 +1,28 @@
 #include "setup.h"
+#include "config.h"
 #include "nvs_flash.h"
+#include "esp_event.h"
+#include "esp_netif.h"
+#include "esp_wifi.h"
+#include "esp_log.h"
+
+#define TAG "SETUP"
 
 #define SUCCESS 0
 #define ERROR   1
 
 #define STATE_SETUP_NVS   0
-#define STATE_SUCCESS     1
-#define STATE_ERROR       2
+#define STATE_SETUP_NETIF 1
+#define STATE_SUCCESS     2
+#define STATE_ERROR       3
 
 /*
  * Non-volatile storage (NVS) library is designed to store key-value pairs in flash.
 */
 int nvs_setup(void) {
-    esp_err_t err = nvs_flash_init();
+    esp_err_t err;
+
+    err = nvs_flash_init();
 
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         if (nvs_flash_erase() == ESP_OK) {
@@ -27,6 +37,27 @@ int nvs_setup(void) {
     return SUCCESS;
 }
 
+/*
+ * ESP-NETIF provides an abstraction layer for the application on top of the TCP/IP stack.
+*/
+int netif_setup(void) {
+    if (esp_netif_init() != ESP_OK) {
+        return ERROR;
+    }
+
+    if (esp_event_loop_create_default() != ESP_OK) {
+        return ERROR;
+    }
+
+    esp_netif_t* netif_wifi_sta = esp_netif_create_default_wifi_sta();
+
+    if (esp_netif_set_hostname(netif_wifi_sta, CONFIG_HOSTNAME) != ESP_OK) {
+        return ERROR;
+    }
+
+    return SUCCESS;
+}
+
 int app_setup(void) {
     int state = STATE_SETUP_NVS;
 
@@ -34,10 +65,23 @@ int app_setup(void) {
         switch (state) {
 
             case STATE_SETUP_NVS:
-                if (nvs_setup() == SUCCESS)
-                    state = STATE_SUCCESS;
-                else
+                if (nvs_setup() == SUCCESS) {
+                    ESP_LOGI(TAG, "Finished NVS setup");
+                    state = STATE_SETUP_NETIF;
+                } else {
+                    ESP_LOGE(TAG, "Error occured during NVS setup");
                     state = STATE_ERROR;
+                }
+                break;
+
+            case STATE_SETUP_NETIF:
+                if (netif_setup() == SUCCESS) {
+                    ESP_LOGI(TAG, "Finished NETIF setup");
+                    state = STATE_SUCCESS;
+                } else {
+                    ESP_LOGE(TAG, "Error occured during NETIF setup");
+                    state = STATE_ERROR;
+                }
                 break;
 
             case STATE_SUCCESS:

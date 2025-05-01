@@ -1,0 +1,20 @@
+mqtt:
+  - switch:
+      unique_id: "esp32_relay0"
+      name: "ESP32 Relay A"
+      state_topic: "esp32/relay0/state"
+      command_topic: "esp32/relay0/set"
+      payload_on: "1"
+      payload_off: "0"
+      state_on: "1"
+      state_off: "0"
+  - switch:
+      unique_id: "esp32_relay1"
+      name: "ESP32 Relay B"
+      state_topic: "esp32/relay1/state"
+      command_topic: "esp32/relay1/set"
+      payload_on: "1"
+      payload_off: "0"
+      state_on: "1"
+      state_off: "0"
+

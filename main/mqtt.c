@@ -6,8 +6,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "portmacro.h"
+#include "relay.h"
 
 #define TAG "MQTT"
+
+#define TOPIC_RELAY_A_STATE CONFIG_MQTT_TOPIC_BASE "/" CONFIG_MQTT_TOPIC_RELAY_A "/state"
+#define TOPIC_RELAY_B_STATE CONFIG_MQTT_TOPIC_BASE "/" CONFIG_MQTT_TOPIC_RELAY_B "/state"
+#define TOPIC_RELAY_A_SET   CONFIG_MQTT_TOPIC_BASE "/" CONFIG_MQTT_TOPIC_RELAY_A "/set"
+#define TOPIC_RELAY_B_SET   CONFIG_MQTT_TOPIC_BASE "/" CONFIG_MQTT_TOPIC_RELAY_B "/set"
 
 #define EVENT_CONNECTED    BIT0
 #define EVENT_DISCONNECTED BIT1
@@ -15,9 +21,11 @@
 
 EventGroupHandle_t event_group_mqtt;
 
+char topic[255];
+char data[255];
+
 void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data) {
     esp_mqtt_event_handle_t mqtt_event = event_data;
-    esp_mqtt_client_handle_t mqtt_client = mqtt_event->client;
     esp_mqtt_event_id_t mqtt_event_id = event_id;
 
     switch (mqtt_event_id) {
@@ -30,16 +38,13 @@ void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event
             break;
 
         case MQTT_EVENT_DATA:
-            xEventGroupSetBits(event_group_mqtt, EVENT_DATA);
-
-            char topic[255];
             memcpy(topic, mqtt_event->topic, mqtt_event->topic_len);
             topic[mqtt_event->topic_len] = '\0';
 
-            char data[255];
             memcpy(data, mqtt_event->data, mqtt_event->data_len);
             data[mqtt_event->data_len] = '\0';
 
+            xEventGroupSetBits(event_group_mqtt, EVENT_DATA);
             break;
 
         default:
@@ -47,7 +52,9 @@ void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event
     }
 }
 
-void mqtt_client(void) {
+void mqtt_task(void* pvParameters) {
+    ESP_LOGI(TAG, "Started MQTT task");
+
     event_group_mqtt = xEventGroupCreate();
 
     esp_mqtt_client_config_t mqtt_config = {
@@ -59,17 +66,41 @@ void mqtt_client(void) {
     esp_mqtt_client_start(mqtt_client);
 
     while (1) {
-        EventBits_t event_bits = xEventGroupWaitBits(event_group_mqtt, EVENT_DISCONNECTED, pdTRUE, pdFALSE, portMAX_DELAY);
+        EventBits_t event_bits = xEventGroupWaitBits(event_group_mqtt, EVENT_DISCONNECTED | EVENT_CONNECTED | EVENT_DATA, pdTRUE, pdFALSE, portMAX_DELAY);
 
         if (event_bits & EVENT_CONNECTED) {
             ESP_LOGI(TAG, "Connected to broker");
-            esp_mqtt_client_subscribe(mqtt_client, "esp32/relay_a", 0);
-            esp_mqtt_client_subscribe(mqtt_client, "esp32/relay_b", 0);
+            esp_mqtt_client_subscribe(mqtt_client, TOPIC_RELAY_A_SET, 0);
+            esp_mqtt_client_subscribe(mqtt_client, TOPIC_RELAY_B_SET, 0);
+            esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_A_STATE, "0", 1, 0, 1);
+            esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_B_STATE, "0", 1, 0, 1);
         }
 
         if (event_bits & EVENT_DISCONNECTED) {
             ESP_LOGE(TAG, "Disconnected from broker");
             return;
+        }
+
+        if (event_bits & EVENT_DATA) {
+            ESP_LOGI(TAG, "Received \"%s\" \"%s\"", topic, data);
+
+            if (strcmp(topic, TOPIC_RELAY_A_SET) == 0) {
+                if (data[0] == '1') {
+                    relay_enable(RELAY_CH_A);
+                    esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_A_STATE, "1", 1, 0, 1);
+                } else if (data[0] == '0') {
+                    relay_disable(RELAY_CH_A);
+                    esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_A_STATE, "0", 1, 0, 1);
+                }
+            } else if (strcmp(topic, TOPIC_RELAY_B_SET) == 0) {
+                if (data[0] == '1') {
+                    relay_enable(RELAY_CH_B);
+                    esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_B_STATE, "1", 1, 0, 1);
+                } else if (data[0] == '0') {
+                    relay_disable(RELAY_CH_B);
+                    esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_B_STATE, "0", 1, 0, 1);
+                }
+            }
         }
     }
 }

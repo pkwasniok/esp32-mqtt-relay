@@ -1,4 +1,4 @@
 #pragma once
 
-void mqtt_client(void);
+void mqtt_task(void* pvParameters);
 

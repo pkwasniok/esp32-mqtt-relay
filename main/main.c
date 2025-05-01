@@ -1,6 +1,5 @@
 #include "setup.h"
 #include "mqtt.h"
-#include "relay.h"
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -12,8 +11,6 @@
 #define STATE_SETUP   0
 #define STATE_RUNNING 1
 #define STATE_ERROR   2
-
-TaskHandle_t task_handle_relay;
 
 void app_main(void)
 {
@@ -36,9 +33,7 @@ void app_main(void)
             case STATE_RUNNING:
                 ESP_LOGI(TAG, "Entering running state");
 
-                xTaskCreate(relay_task, "relay", 2048, NULL, 10, &task_handle_relay);
-
-                mqtt_client();
+                mqtt_task(NULL);
                 state = STATE_ERROR;
 
                 break;

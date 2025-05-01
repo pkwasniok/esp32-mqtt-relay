@@ -7,3 +7,5 @@ void relay_setup();
 void relay_enable(int channel);
 void relay_disable(int channel);
 
+void relay_task(void* pvParameters);
+

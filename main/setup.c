@@ -1,5 +1,6 @@
 #include "setup.h"
 #include "config.h"
+#include "relay.h"
 #include "wifi.h"
 #include "nvs_flash.h"
 #include "esp_event.h"
@@ -12,11 +13,12 @@
 #define SUCCESS 0
 #define ERROR   1
 
-#define STATE_SETUP_NVS   0
-#define STATE_SETUP_NETIF 1
-#define STATE_SETUP_WIFI  2
-#define STATE_SUCCESS     3
-#define STATE_ERROR       4
+#define STATE_SETUP_IO    0
+#define STATE_SETUP_NVS   1
+#define STATE_SETUP_NETIF 2
+#define STATE_SETUP_WIFI  3
+#define STATE_SUCCESS     4
+#define STATE_ERROR       5
 
 /*
  * Non-volatile storage (NVS) library is designed to store key-value pairs in flash.
@@ -61,10 +63,16 @@ int netif_setup(void) {
 }
 
 int app_setup(void) {
-    int state = STATE_SETUP_NVS;
+    int state = STATE_SETUP_IO;
 
     while (1) {
         switch (state) {
+
+            case STATE_SETUP_IO:
+                relay_setup();
+                ESP_LOGI(TAG, "Finished IO setup");
+                state = STATE_SETUP_NVS;
+                break;
 
             case STATE_SETUP_NVS:
                 if (nvs_setup() == SUCCESS) {

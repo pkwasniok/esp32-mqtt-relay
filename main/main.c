@@ -1,4 +1,5 @@
 #include "setup.h"
+#include "mqtt.h"
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -32,8 +33,8 @@ void app_main(void)
             case STATE_RUNNING:
                 ESP_LOGI(TAG, "Entering running state");
 
-                printf("Running\n");
-                vTaskDelay(5000 / portTICK_PERIOD_MS);
+                mqtt_client();
+                state = STATE_ERROR;
 
                 break;
 

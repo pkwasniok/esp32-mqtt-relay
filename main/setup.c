@@ -1,6 +1,7 @@
 #include "setup.h"
 #include "config.h"
 #include "relay.h"
+#include "led.h"
 #include "wifi.h"
 #include "nvs_flash.h"
 #include "esp_event.h"
@@ -70,6 +71,7 @@ int app_setup(void) {
 
             case STATE_SETUP_IO:
                 relay_setup();
+                led_setup();
                 ESP_LOGI(TAG, "Finished IO setup");
                 state = STATE_SETUP_NVS;
                 break;

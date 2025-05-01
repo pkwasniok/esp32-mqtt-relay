@@ -1,3 +1,4 @@
+#include "led.h"
 #include "setup.h"
 #include "mqtt.h"
 #include <stdio.h>
@@ -33,8 +34,12 @@ void app_main(void)
             case STATE_RUNNING:
                 ESP_LOGI(TAG, "Entering running state");
 
+                led_enable();
+
                 mqtt_task(NULL);
                 state = STATE_ERROR;
+
+                led_disable();
 
                 break;
 

@@ -72,8 +72,16 @@ void mqtt_task(void* pvParameters) {
             ESP_LOGI(TAG, "Connected to broker");
             esp_mqtt_client_subscribe(mqtt_client, TOPIC_RELAY_A_SET, 0);
             esp_mqtt_client_subscribe(mqtt_client, TOPIC_RELAY_B_SET, 0);
-            esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_A_STATE, "0", 1, 0, 1);
-            esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_B_STATE, "0", 1, 0, 1);
+
+            if (relay_get(RELAY_CH_A) == RELAY_ENABLE)
+                esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_A_STATE, "1", 1, 0, 1);
+            else
+                esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_A_STATE, "0", 1, 0, 1);
+
+            if (relay_get(RELAY_CH_B) == RELAY_ENABLE)
+                esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_B_STATE, "1", 1, 0, 1);
+            else
+                esp_mqtt_client_publish(mqtt_client, TOPIC_RELAY_B_STATE, "0", 1, 0, 1);
         }
 
         if (event_bits & EVENT_DISCONNECTED) {

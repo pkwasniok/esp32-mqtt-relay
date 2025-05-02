@@ -1,6 +1,7 @@
 #include "led.h"
 #include "setup.h"
 #include "mqtt.h"
+#include "relay.h"
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
